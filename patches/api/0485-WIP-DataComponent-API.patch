@@ -1,0 +1,1834 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Owen1212055 <23108066+Owen1212055@users.noreply.github.com>
+Date: Sun, 28 Apr 2024 19:53:06 -0400
+Subject: [PATCH] WIP DataComponent API
+
+
+diff --git a/src/main/java/io/papermc/paper/component/ComponentBuilder.java b/src/main/java/io/papermc/paper/component/ComponentBuilder.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f5e6f7c6fb44898e8bfdb87c8d2569086025cba
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/ComponentBuilder.java
+@@ -0,0 +1,22 @@
++package io.papermc.paper.component;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++/**
++ * Base builder type for all component builders.
++ *
++ * @param <C> built component type
++ */
++@ApiStatus.NonExtendable
++public interface ComponentBuilder<C> {
++
++    /**
++     * Builds the immutable component value.
++     *
++     * @return a new component value
++     */
++    @Contract(value = "-> new", pure = true)
++    @NonNull C build();
++}
+diff --git a/src/main/java/io/papermc/paper/component/DataComponentType.java b/src/main/java/io/papermc/paper/component/DataComponentType.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..50d15b4e0ed5cd17fdc95476ee4650ef918af62c
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/DataComponentType.java
+@@ -0,0 +1,27 @@
++package io.papermc.paper.component;
++
++import org.bukkit.Keyed;
++import org.jetbrains.annotations.ApiStatus;
++
++@ApiStatus.NonExtendable
++public interface DataComponentType extends Keyed {
++
++    /**
++     * Checks if this data component type is persistent, or
++     * that it will be saved with any itemstack it's attached to.
++     *
++     * @return true if persistent, false otherwise
++     */
++    boolean isPersistent();
++
++    @SuppressWarnings("unused")
++    @ApiStatus.NonExtendable
++    interface Valued<T> extends DataComponentType {
++
++    }
++
++    @ApiStatus.NonExtendable
++    interface NonValued extends DataComponentType {
++
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/DataComponentTypes.java b/src/main/java/io/papermc/paper/component/DataComponentTypes.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..dfb4bfa4183818d7aa6a714979b5f7b8808867f0
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/DataComponentTypes.java
+@@ -0,0 +1,112 @@
++package io.papermc.paper.component;
++
++import io.papermc.paper.component.item.BannerPatternLayers;
++import io.papermc.paper.component.item.BlockItemDataProperties;
++import io.papermc.paper.component.item.BundleContents;
++import io.papermc.paper.component.item.ChargedProjectiles;
++import io.papermc.paper.component.item.CustomModelData;
++import io.papermc.paper.component.item.DyedItemColor;
++import io.papermc.paper.component.item.Fireworks;
++import io.papermc.paper.component.item.FoodProperties;
++import io.papermc.paper.component.item.ItemArmorTrim;
++import io.papermc.paper.component.item.ItemAttributeModifiers;
++import io.papermc.paper.component.item.ItemContainerContents;
++import io.papermc.paper.component.item.ItemEnchantments;
++import io.papermc.paper.component.item.ItemLore;
++import io.papermc.paper.component.item.LockCode;
++import io.papermc.paper.component.item.LodestoneTracker;
++import io.papermc.paper.component.item.MapDecorations;
++import io.papermc.paper.component.item.MapID;
++import io.papermc.paper.component.item.MapItemColor;
++import io.papermc.paper.component.item.MapPostProcessing;
++import io.papermc.paper.component.item.PotDecorations;
++import io.papermc.paper.component.item.PotionContents;
++import io.papermc.paper.component.item.ResolvableProfile;
++import io.papermc.paper.component.item.SeededContainerLoot;
++import io.papermc.paper.component.item.SuspiciousStewEffects;
++import io.papermc.paper.component.item.Unbreakable;
++import io.papermc.paper.component.item.WritableBookContent;
++import io.papermc.paper.component.item.WrittenBookContent;
++import net.kyori.adventure.text.Component;
++import org.bukkit.DyeColor;
++import org.bukkit.FireworkEffect;
++import org.bukkit.MusicInstrument;
++import org.bukkit.NamespacedKey;
++import org.bukkit.Registry;
++import org.bukkit.inventory.ItemRarity;
++import java.security.Key;
++import java.util.List;
++
++import static java.util.Objects.requireNonNull;
++
++public final class DataComponentTypes {
++
++    // public static final DataComponentType.Valued<BinaryTagHolder> CUSTOM_DATA = valued("custom_data");
++    public static final DataComponentType.Valued<Integer> MAX_STACK_SIZE = valued("max_stack_size");
++    public static final DataComponentType.Valued<Integer> MAX_DAMAGE = valued("max_damage");
++    public static final DataComponentType.Valued<Integer> DAMAGE = valued("damage");
++    public static final DataComponentType.Valued<Unbreakable> UNBREAKABLE = valued("unbreakable");
++    public static final DataComponentType.Valued<Component> CUSTOM_NAME = valued("custom_name");
++    public static final DataComponentType.Valued<Component> ITEM_NAME = valued("item_name");
++    public static final DataComponentType.Valued<ItemLore> LORE = valued("lore");
++    public static final DataComponentType.Valued<ItemRarity> RARITY = valued("rarity");
++    public static final DataComponentType.Valued<ItemEnchantments> ENCHANTMENTS = valued("enchantments");
++    // can_place_on
++    // can_break
++    public static final DataComponentType.Valued<ItemAttributeModifiers> ATTRIBUTE_MODIFIERS = valued("attribute_modifiers");
++    public static final DataComponentType.Valued<CustomModelData> CUSTOM_MODEL_DATA = valued("custom_model_data");
++    public static final DataComponentType.NonValued HIDE_ADDITIONAL_TOOLTIP = unvalued("hide_additional_tooltip");
++    public static final DataComponentType.NonValued  HIDE_TOOLTIP = unvalued("hide_tooltip");
++    public static final DataComponentType.Valued<Integer> REPAIR_COST = valued("repair_cost");
++    public static final DataComponentType.NonValued  CREATIVE_SLOT_LOCK = unvalued("creative_slot_lock");
++    public static final DataComponentType.Valued<Boolean> ENCHANTMENT_GLINT_OVERRIDE = valued("enchantment_glint_override");
++    public static final DataComponentType.NonValued INTANGIBLE_PROJECTILE = unvalued("intangible_projectile");
++    public static final DataComponentType.Valued<FoodProperties> FOOD = valued("food");
++    public static final DataComponentType.NonValued FIRE_RESISTANT = unvalued("fire_resistant");
++    // tool
++    public static final DataComponentType.Valued<ItemEnchantments> STORED_ENCHANTMENTS = valued("stored_enchantments");
++    public static final DataComponentType.Valued<DyedItemColor> DYED_COLOR = valued("dyed_color");
++    public static final DataComponentType.Valued<MapItemColor> MAP_COLOR = valued("map_color");
++    public static final DataComponentType.Valued<MapID> MAP_ID = valued("map_id");
++    public static final DataComponentType.Valued<MapDecorations> MAP_DECORATIONS = valued("map_decorations");
++    public static final DataComponentType.Valued<MapPostProcessing> MAP_POST_PROCESSING = valued("map_post_processing");
++    public static final DataComponentType.Valued<ChargedProjectiles> CHARGED_PROJECTILES = valued("charged_projectiles");
++    public static final DataComponentType.Valued<BundleContents> BUNDLE_CONTENTS = valued("bundle_contents");
++    public static final DataComponentType.Valued<PotionContents> POTION_CONTENTS = valued("potion_contents");
++    public static final DataComponentType.Valued<SuspiciousStewEffects> SUSPICIOUS_STEW_EFFECTS = valued("suspicious_stew_effects");
++    public static final DataComponentType.Valued<WritableBookContent> WRITABLE_BOOK_CONTENT = valued("writable_book_content");
++    public static final DataComponentType.Valued<WrittenBookContent> WRITTEN_BOOK_CONTENT = valued("written_book_content");
++    public static final DataComponentType.Valued<ItemArmorTrim> TRIM = valued("trim");
++    // debug_stick_state - Block Property API
++    // entity_data
++    // bucket_entity_data
++    // block_entity_data
++    public static final DataComponentType.Valued<MusicInstrument> INSTRUMENT = valued("instrument");
++    public static final DataComponentType.Valued<Integer> OMINOUS_BOTTLE_AMPLIFIER = valued("ominous_bottle_amplifier");
++    public static final DataComponentType.Valued<List<Key>> RECIPES = valued("recipes");
++    public static final DataComponentType.Valued<LodestoneTracker> LODESTONE_TRACKER = valued("lodestone_tracker");
++    public static final DataComponentType.Valued<FireworkEffect> FIREWORK_EXPLOSION = valued("firework_explosion");
++    public static final DataComponentType.Valued<Fireworks> FIREWORKS = valued("fireworks");
++    public static final DataComponentType.Valued<ResolvableProfile> PROFILE = valued("profile");
++    public static final DataComponentType.Valued<NamespacedKey> NOTE_BLOCK_SOUND = valued("note_block_sound");
++    public static final DataComponentType.Valued<BannerPatternLayers> BANNER_PATTERNS = valued("banner_patterns");
++    public static final DataComponentType.Valued<DyeColor> BASE_COLOR = valued("base_color");
++    public static final DataComponentType.Valued<PotDecorations> POT_DECORATIONS = valued("pot_decorations");
++    public static final DataComponentType.Valued<ItemContainerContents> CONTAINER = valued("container");
++    public static final DataComponentType.Valued<BlockItemDataProperties> BLOCK_DATA = valued("block_state");
++    // bees
++    public static final DataComponentType.Valued<LockCode> LOCK = valued("lock");
++    public static final DataComponentType.Valued<SeededContainerLoot> CONTAINER_LOOT = valued("container_loot");
++
++    private static DataComponentType.NonValued unvalued(final String name) {
++        return (DataComponentType.NonValued) requireNonNull(Registry.DATA_COMPONENT_TYPE.get(NamespacedKey.minecraft(name)), name + " unvalued data component type couldn't be found, this is a bug.");
++    }
++
++    @SuppressWarnings("unchecked")
++    private static <T> DataComponentType.Valued<T> valued(final String name) {
++        return (DataComponentType.Valued<T>) requireNonNull(Registry.DATA_COMPONENT_TYPE.get(NamespacedKey.minecraft(name)), name + " valued data component type couldn't be found, this is a bug.");
++    }
++
++    private DataComponentTypes() {
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/BannerPatternLayers.java b/src/main/java/io/papermc/paper/component/item/BannerPatternLayers.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d1c94278eeaffcc68d1d83b7bc548d72fd8e757
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/BannerPatternLayers.java
+@@ -0,0 +1,42 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Arrays;
++import java.util.List;
++import org.bukkit.block.banner.Pattern;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface BannerPatternLayers {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull BannerPatternLayers bannerPatternLayers(final @NonNull Pattern @NonNull...patterns) {
++        return bannerPatternLayers(Arrays.asList(patterns));
++    }
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull BannerPatternLayers bannerPatternLayers(final @NonNull List<@NonNull Pattern> patterns) {
++        return bannerPatternLayers().addAll(patterns).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static BannerPatternLayers.@NonNull Builder bannerPatternLayers() {
++        return ComponentTypesBridge.bridge().bannerPatternLayers();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<Pattern> patterns();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<BannerPatternLayers> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull Pattern pattern);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull Pattern> patterns);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/BlockItemDataProperties.java b/src/main/java/io/papermc/paper/component/item/BlockItemDataProperties.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..1c4859bcabcc2a4a2e3b52253a984960970bc3d9
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/BlockItemDataProperties.java
+@@ -0,0 +1,28 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import org.bukkit.Material;
++import org.bukkit.block.data.BlockData;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface BlockItemDataProperties {
++
++    @Contract(value = "-> new", pure = true)
++    static BlockItemDataProperties.@NonNull Builder blockItemStateProperties() {
++        return ComponentTypesBridge.bridge().blockItemStateProperties();
++    }
++
++    @Contract(pure = true)
++    @NonNull BlockData createBlockData(@NonNull Material blockType);
++
++    @Contract(pure = true)
++    @NonNull BlockData applyToBlockData(@NonNull BlockData blockData);
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<BlockItemDataProperties> {
++        // building this requires BlockProperty API, so an empty builder for now (essentially read-only)
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/BundleContents.java b/src/main/java/io/papermc/paper/component/item/BundleContents.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..2f0ca3360ec033d335b80f269a0d9253d76a190c
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/BundleContents.java
+@@ -0,0 +1,42 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Arrays;
++import java.util.List;
++import org.bukkit.inventory.ItemStack;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface BundleContents {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull BundleContents bundleContents(final @NonNull ItemStack @NonNull... contents) {
++        return bundleContents(Arrays.asList(contents));
++    }
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull BundleContents bundleContents(final @NonNull List<@NonNull ItemStack> contents) {
++        return ComponentTypesBridge.bridge().bundleContents().addAll(contents).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static BundleContents.@NonNull Builder bundleContents() {
++        return ComponentTypesBridge.bridge().bundleContents();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    @NonNull @Unmodifiable List<@NonNull ItemStack> contents();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<BundleContents> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull ItemStack stack);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull ItemStack> stacks);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ChargedProjectiles.java b/src/main/java/io/papermc/paper/component/item/ChargedProjectiles.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..48f5b0a3bceb4312a5a2e10ee27811ce9036c4ff
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ChargedProjectiles.java
+@@ -0,0 +1,42 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Arrays;
++import java.util.List;
++import org.bukkit.inventory.ItemStack;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface ChargedProjectiles {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull ChargedProjectiles chargedProjectiles(final @NonNull ItemStack @NonNull...projectiles) {
++        return chargedProjectiles(Arrays.asList(projectiles));
++    }
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull ChargedProjectiles chargedProjectiles(final @NonNull List<@NonNull ItemStack> projectiles) {
++        return chargedProjectiles().addAll(projectiles).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static ChargedProjectiles.@NonNull Builder chargedProjectiles() {
++        return ComponentTypesBridge.bridge().chargedProjectiles();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    @NonNull @Unmodifiable List<@NonNull ItemStack> projectiles();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<ChargedProjectiles> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull ItemStack itemStack);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull ItemStack> itemStack);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ComponentTypesBridge.java b/src/main/java/io/papermc/paper/component/item/ComponentTypesBridge.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..6b00f5383bb3c957da62d2abe675f0d3059bad33
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ComponentTypesBridge.java
+@@ -0,0 +1,76 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.util.Filtered;
++import java.util.Optional;
++import java.util.ServiceLoader;
++import net.kyori.adventure.key.Key;
++import org.bukkit.inventory.meta.trim.ArmorTrim;
++import org.bukkit.map.MapCursor;
++import org.bukkit.potion.PotionEffect;
++import org.jetbrains.annotations.ApiStatus;
++
++@ApiStatus.Internal
++interface ComponentTypesBridge {
++
++    Optional<ComponentTypesBridge> BRIDGE = ServiceLoader.load(ComponentTypesBridge.class).findFirst();
++
++    static ComponentTypesBridge bridge() {
++        return BRIDGE.orElseThrow();
++    }
++
++    ChargedProjectiles.Builder chargedProjectiles();
++
++    PotDecorations.Builder potDecorations();
++
++    Unbreakable.Builder unbreakable();
++
++    ItemLore.Builder lore();
++
++    ItemEnchantments.Builder enchantments();
++
++    ItemAttributeModifiers.Builder modifiers();
++
++    FoodProperties.Builder food();
++
++    FoodProperties.PossibleEffect foodEffect(PotionEffect effect, float probability);
++
++    DyedItemColor.Builder dyedItemColor();
++
++    PotionContents.Builder potionContents();
++
++    BundleContents.Builder bundleContents();
++
++    CustomModelData.Builder customModelData();
++
++    SuspiciousStewEffects.Builder suspiciousStewEffects();
++
++    BundleContents.Builder mapItemColor();
++
++    MapID.Builder mapId();
++
++    MapDecorations.Builder mapDecorations();
++
++    MapDecorations.DecorationEntry decorationEntry(MapCursor.Type type, double x, double z, float rotation);
++
++    SeededContainerLoot.Builder seededContainerLoot(Key lootTableKey);
++
++    WrittenBookContent.Builder writtenBookContent(Filtered<String> title, String author);
++
++    WritableBookContent.Builder writeableBookContent();
++
++    ItemArmorTrim.Builder itemArmorTrim(ArmorTrim armorTrim);
++
++    LodestoneTracker.Builder lodestoneTracker();
++
++    Fireworks.Builder fireworks();
++
++    ResolvableProfile.Builder resolvableProfile();
++
++    BannerPatternLayers.Builder bannerPatternLayers();
++
++    BlockItemDataProperties.Builder blockItemStateProperties();
++
++    LockCode.Builder lockCode();
++
++    ItemContainerContents.Builder itemContainerContents();
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/CustomModelData.java b/src/main/java/io/papermc/paper/component/item/CustomModelData.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..d8919127e181573ef5afe857cbc777a6a45b140a
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/CustomModelData.java
+@@ -0,0 +1,27 @@
++package io.papermc.paper.component.item;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface CustomModelData {
++
++    @Contract(value = "-> new", pure = true)
++    static CustomModelData.@NonNull Builder customModelData() {
++        return ComponentTypesBridge.bridge().customModelData();
++    }
++
++    @Contract(pure = true)
++    int data();
++
++    @ApiStatus.NonExtendable
++    interface Builder {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder customModelData(int data);
++
++        @Contract(value = "-> new", pure = true)
++        @NonNull CustomModelData build();
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/DyedItemColor.java b/src/main/java/io/papermc/paper/component/item/DyedItemColor.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..51ab59571e7c75cfc72d0d40bd5ed18d2f5014c2
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/DyedItemColor.java
+@@ -0,0 +1,31 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import org.bukkit.Color;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface DyedItemColor extends ShownInTooltip<DyedItemColor> {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static @NonNull DyedItemColor dyedItemColor(final @NonNull Color color, final boolean showInTooltip) {
++        return dyedItemColor().color(color).showInTooltip(showInTooltip).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static DyedItemColor.@NonNull Builder dyedItemColor() {
++        return ComponentTypesBridge.bridge().dyedItemColor();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    @NonNull Color color();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ShownInTooltip.Builder<Builder>, ComponentBuilder<DyedItemColor> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder color(@NonNull Color color);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/Fireworks.java b/src/main/java/io/papermc/paper/component/item/Fireworks.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e6b91f994b5790886f5da908bbee6f3867b4736
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/Fireworks.java
+@@ -0,0 +1,42 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.List;
++import org.bukkit.FireworkEffect;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface Fireworks {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static @NonNull Fireworks fireworks(final @NonNull List<@NonNull FireworkEffect> effects, final int flightDuration) {
++        return fireworks().addAll(effects).flightDuration(flightDuration).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static Fireworks.@NonNull Builder fireworks() {
++        return ComponentTypesBridge.bridge().fireworks();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull FireworkEffect> effects();
++
++    @Contract(pure = true)
++    int flightDuration();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<Fireworks> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder flightDuration(int duration);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull FireworkEffect effect);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull FireworkEffect> effects);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/FoodProperties.java b/src/main/java/io/papermc/paper/component/item/FoodProperties.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..4a327687011b3e7d81a4d455436ebb1d57c667e0
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/FoodProperties.java
+@@ -0,0 +1,66 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.List;
++import org.bukkit.potion.PotionEffect;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface FoodProperties {
++
++    @Contract(value = "-> new", pure = true)
++    static FoodProperties.@NonNull Builder food() {
++        return ComponentTypesBridge.bridge().food();
++    }
++
++    @Contract(pure = true)
++    int nutrition();
++
++    @Contract(pure = true)
++    float saturation();
++
++    @Contract(pure = true)
++    boolean canAlwaysEat();
++
++    @Contract(pure = true)
++    float eatSeconds();
++
++    @Unmodifiable @NonNull List<@NonNull PossibleEffect> effects();
++
++    @ApiStatus.NonExtendable
++    interface PossibleEffect {
++
++        static @NonNull PossibleEffect of(final @NonNull PotionEffect effect, final float probability) {
++            return ComponentTypesBridge.bridge().foodEffect(effect, probability);
++        }
++
++        @NonNull PotionEffect effect();
++
++        float probability();
++    }
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<FoodProperties> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder canAlwaysEat(boolean canAlwaysEat);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder eatSeconds(float eatSeconds);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder saturation(float saturation);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder nutrition(int nutrition);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addEffect(@NonNull PossibleEffect effect);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAllEffects(@NonNull List<@NonNull PossibleEffect> effects);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ItemArmorTrim.java b/src/main/java/io/papermc/paper/component/item/ItemArmorTrim.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0d1ecd1e33a423df2ef07f1bf73334b06224b199
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ItemArmorTrim.java
+@@ -0,0 +1,31 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import org.bukkit.inventory.meta.trim.ArmorTrim;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface ItemArmorTrim extends ShownInTooltip<ItemArmorTrim> {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static @NonNull ItemArmorTrim itemArmorTrim(final @NonNull ArmorTrim armorTrim, final boolean showInTooltip) {
++        return itemArmorTrim(armorTrim).showInTooltip(showInTooltip).build();
++    }
++
++    @Contract(value = "_, -> new", pure = true)
++    static ItemArmorTrim.@NonNull Builder itemArmorTrim(final @NonNull ArmorTrim armorTrim) {
++        return ComponentTypesBridge.bridge().itemArmorTrim(armorTrim);
++    }
++
++    @Contract(pure = true)
++    @NonNull ArmorTrim armorTrim();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ShownInTooltip.Builder<Builder>, ComponentBuilder<ItemArmorTrim> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder armorTrim(@NonNull ArmorTrim armorTrim);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ItemAttributeModifiers.java b/src/main/java/io/papermc/paper/component/item/ItemAttributeModifiers.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..e0940c24da8c7f0480cf1bcb5c4600aa21cba170
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ItemAttributeModifiers.java
+@@ -0,0 +1,38 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.List;
++import org.bukkit.attribute.Attribute;
++import org.bukkit.attribute.AttributeModifier;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface ItemAttributeModifiers extends ShownInTooltip<ItemAttributeModifiers> {
++
++    @Contract(value = "-> new", pure = true)
++    static ItemAttributeModifiers.@NonNull Builder itemAttributes() {
++        return ComponentTypesBridge.bridge().modifiers();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull Entry> modifiers();
++
++    interface Entry {
++
++        @Contract(pure = true)
++        @NonNull Attribute attribute();
++
++        @Contract(pure = true)
++        @NonNull AttributeModifier modifier();
++    }
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ShownInTooltip.Builder<Builder>, ComponentBuilder<ItemAttributeModifiers> {
++
++        @Contract(value = "_, _ -> this", mutates = "this")
++        @NonNull Builder addModifier(@NonNull Attribute attribute, @NonNull AttributeModifier attributeModifier);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ItemContainerContents.java b/src/main/java/io/papermc/paper/component/item/ItemContainerContents.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..41c91487c3e60c744dba7cf0be86adce97bf5e4d
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ItemContainerContents.java
+@@ -0,0 +1,42 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Arrays;
++import java.util.List;
++import org.bukkit.inventory.ItemStack;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface ItemContainerContents {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull ItemContainerContents containerContents(final @NonNull ItemStack @NonNull...contents) {
++        return containerContents().addAll(Arrays.asList(contents)).build();
++    }
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull ItemContainerContents containerContents(final @NonNull List<@NonNull ItemStack> contents) {
++        return containerContents().addAll(contents).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static ItemContainerContents.@NonNull Builder containerContents() {
++        return ComponentTypesBridge.bridge().itemContainerContents();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    @NonNull @Unmodifiable List<@NonNull ItemStack> contents();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<ItemContainerContents> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull ItemStack itemStack);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull ItemStack> itemStacks);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ItemEnchantments.java b/src/main/java/io/papermc/paper/component/item/ItemEnchantments.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..97d1dca2b7f7ea2a786408d064973e271e946ac6
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ItemEnchantments.java
+@@ -0,0 +1,36 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Map;
++import org.bukkit.enchantments.Enchantment;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface ItemEnchantments extends ShownInTooltip<ItemEnchantments> {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static @NonNull ItemEnchantments itemEnchantments(final @NonNull Map<Enchantment, Integer> enchantments, final boolean showInTooltip) {
++        return itemEnchantments().addAll(enchantments).showInTooltip(showInTooltip).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static ItemEnchantments.@NonNull Builder itemEnchantments() {
++        return ComponentTypesBridge.bridge().enchantments();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable Map<@NonNull Enchantment, @NonNull Integer> enchantments();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ShownInTooltip.Builder<Builder>, ComponentBuilder<ItemEnchantments> {
++
++        @Contract(value = "_, _ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull Enchantment enchantment, int level);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull Map<@NonNull Enchantment, @NonNull Integer> enchantments);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ItemLore.java b/src/main/java/io/papermc/paper/component/item/ItemLore.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..f2db3054e16bcdd615b98cc728d17f96b5e64582
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ItemLore.java
+@@ -0,0 +1,43 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.List;
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.ComponentLike;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface ItemLore {
++
++    @Contract(value = "_ -> new", pure = true)
++    static ItemLore lore(final @NonNull List<@NonNull ? extends ComponentLike> lines) {
++        return lore().lines(lines).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static ItemLore.@NonNull Builder lore() {
++        return ComponentTypesBridge.bridge().lore();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull Component> lines();
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull Component> styledLines();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<ItemLore> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        Builder lines(@NonNull List<@NonNull ? extends ComponentLike> lines);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addLine(@NonNull ComponentLike line);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAllLines(@NonNull List<@NonNull ? extends ComponentLike> lines);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/LockCode.java b/src/main/java/io/papermc/paper/component/item/LockCode.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..dfcd12fe3fed01ff93bce6eca732bd6f1f4cf5fd
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/LockCode.java
+@@ -0,0 +1,27 @@
++package io.papermc.paper.component.item;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface LockCode {
++
++    @Contract(value = "-> new", pure = true)
++    static LockCode.@NonNull Builder lockCode() {
++        return ComponentTypesBridge.bridge().lockCode();
++    }
++
++    @Contract(pure = true)
++    @NonNull String lock();
++
++    @ApiStatus.NonExtendable
++    interface Builder {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder lock(@NonNull String code);
++
++        @Contract(value = "-> new", pure = true)
++        @NonNull LockCode build();
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/LodestoneTracker.java b/src/main/java/io/papermc/paper/component/item/LodestoneTracker.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..2835c0ac093ce9b46b9a68228b61cf12187e6788
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/LodestoneTracker.java
+@@ -0,0 +1,38 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import org.bukkit.Location;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface LodestoneTracker {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static @NonNull LodestoneTracker lodestoneTracker(final @Nullable Location location, final boolean tracked) {
++        return lodestoneTracker().location(location).tracked(tracked).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static LodestoneTracker.@NonNull Builder lodestoneTracker() {
++        return ComponentTypesBridge.bridge().lodestoneTracker();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    @Nullable Location location();
++
++    @Contract(pure = true)
++    boolean tracked();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<LodestoneTracker> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder location(@Nullable Location page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder tracked(boolean tracked);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/MapDecorations.java b/src/main/java/io/papermc/paper/component/item/MapDecorations.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..3bca9c5b46d595b33535b538d1f4f625d349fda4
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/MapDecorations.java
+@@ -0,0 +1,57 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Map;
++import org.bukkit.map.MapCursor;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface MapDecorations {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull MapDecorations mapDecorations(final @NonNull Map<@NonNull String, @NonNull DecorationEntry> entries) {
++        return mapDecorations().putAll(entries).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static MapDecorations.@NonNull Builder mapDecorations() {
++        return ComponentTypesBridge.bridge().mapDecorations();
++    }
++
++    @Contract(pure = true)
++    @Nullable DecorationEntry getDecoration(@NonNull String id);
++
++    @ApiStatus.NonExtendable
++    interface DecorationEntry {
++
++        @Contract(value = "_, _, _, _ -> new", pure = true)
++        static @NonNull DecorationEntry of(final MapCursor.@NonNull Type type, final double x, final double z, final float rotation) {
++            return ComponentTypesBridge.bridge().decorationEntry(type, x, z, rotation);
++        }
++
++        @Contract(pure = true)
++        MapCursor.@NonNull Type type();
++
++        @Contract(pure = true)
++        double x();
++
++        @Contract(pure = true)
++        double z();
++
++        @Contract(pure = true)
++        float rotation();
++    }
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<MapDecorations> {
++
++        @Contract(value = "_, _ -> this", mutates = "this")
++        MapDecorations.@NonNull Builder put(@NonNull String id, @NonNull DecorationEntry entry);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        MapDecorations.@NonNull Builder putAll(@NonNull Map<@NonNull String, @NonNull DecorationEntry> entries);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/MapID.java b/src/main/java/io/papermc/paper/component/item/MapID.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb895caa1c5acc8116b9c52021835e186fdbacd5
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/MapID.java
+@@ -0,0 +1,27 @@
++package io.papermc.paper.component.item;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface MapID {
++
++    @Contract(value = "-> new", pure = true)
++    static MapID.@NonNull Builder mapId() {
++        return ComponentTypesBridge.bridge().mapId();
++    }
++
++    @Contract(pure = true)
++    int id();
++
++    @ApiStatus.NonExtendable
++    interface Builder {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder mapId(int id);
++
++        @Contract(value = "-> new", pure = true)
++        @NonNull MapID build();
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/MapItemColor.java b/src/main/java/io/papermc/paper/component/item/MapItemColor.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c606e1d4856a912dc407b6047cb9e024e822cb3
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/MapItemColor.java
+@@ -0,0 +1,27 @@
++package io.papermc.paper.component.item;
++
++import org.bukkit.Color;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface MapItemColor {
++
++    @Contract(value = "-> new", pure = true)
++    static BundleContents.@NonNull Builder mapItemColor() {
++        return ComponentTypesBridge.bridge().mapItemColor();
++    }
++
++    @NonNull Color mapColor();
++
++    @ApiStatus.NonExtendable
++    interface Builder {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder mapColor(@NonNull Color color);
++
++        @Contract(value = "-> new", pure = true)
++        @NonNull MapItemColor build();
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/MapPostProcessing.java b/src/main/java/io/papermc/paper/component/item/MapPostProcessing.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0b26ee6870600557b82a6ea37e2789dcb5e267c8
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/MapPostProcessing.java
+@@ -0,0 +1,6 @@
++package io.papermc.paper.component.item;
++
++public enum MapPostProcessing {
++    LOCK,
++    SCALE
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/PotDecorations.java b/src/main/java/io/papermc/paper/component/item/PotDecorations.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb2f3d705102cf67c847b2b2d38cc239c89b6716
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/PotDecorations.java
+@@ -0,0 +1,50 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import org.bukkit.Material;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface PotDecorations {
++
++    @Contract(value = "_, _, _, _ -> new", pure = true)
++    static @NonNull PotDecorations potDecorations(final @Nullable Material back, final @Nullable Material left, final @Nullable Material right, final @Nullable Material front) {
++        return potDecorations().back(back).left(left).right(right).front(front).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static PotDecorations.@NonNull Builder potDecorations() {
++        return ComponentTypesBridge.bridge().potDecorations();
++    }
++
++    @Contract(pure = true)
++    @Nullable Material back();
++
++    @Contract(pure = true)
++    @Nullable Material left();
++
++    @Contract(pure = true)
++    @Nullable Material right();
++
++    @Contract(pure = true)
++    @Nullable Material front();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<PotDecorations> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        Builder back(@Nullable Material back);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        Builder left(@Nullable Material left);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        Builder right(@Nullable Material right);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        Builder front(@Nullable Material font);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/PotionContents.java b/src/main/java/io/papermc/paper/component/item/PotionContents.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..902d93544b686440442d2e29f6df3ce85f5a996f
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/PotionContents.java
+@@ -0,0 +1,46 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.List;
++import org.bukkit.Color;
++import org.bukkit.potion.PotionEffect;
++import org.bukkit.potion.PotionType;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface PotionContents {
++
++    @Contract(value = "-> new", pure = true)
++    static PotionContents.@NonNull Builder potionContents() { // can't name it just "enchantments"
++        return ComponentTypesBridge.bridge().potionContents();
++    }
++
++    @Contract(pure = true)
++    @Nullable PotionType potion();
++
++    @Contract(pure = true)
++    @Nullable Color customColor();
++
++    @Contract(pure = true)
++    @Unmodifiable @NonNull List<@NonNull PotionEffect> customEffects();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<PotionContents> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder potion(@Nullable PotionType potionType);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder customColor(@Nullable Color color);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull PotionEffect potionEffect);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull PotionEffect> potionEffects);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ResolvableProfile.java b/src/main/java/io/papermc/paper/component/item/ResolvableProfile.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..89c4314048cfb277026c9f5e9a7c05494b3f4c02
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ResolvableProfile.java
+@@ -0,0 +1,51 @@
++package io.papermc.paper.component.item;
++
++import com.destroystokyo.paper.profile.PlayerProfile;
++import com.destroystokyo.paper.profile.ProfileProperty;
++import io.papermc.paper.component.ComponentBuilder;
++import java.util.Collection;
++import java.util.List;
++import java.util.UUID;
++import java.util.concurrent.CompletableFuture;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface ResolvableProfile {
++
++    @Contract(value = "-> new", pure = true)
++    static ResolvableProfile.@NonNull Builder resolvableProfile() {
++        return ComponentTypesBridge.bridge().resolvableProfile();
++    }
++
++    @Contract(pure = true)
++    @Nullable UUID uuid();
++
++    @Contract(pure = true)
++    @Nullable String name();
++
++    @Contract(pure = true)
++    @Unmodifiable @NonNull Collection<@NonNull ProfileProperty> properties();
++
++    @Contract(pure = true)
++    @NonNull CompletableFuture<@NonNull PlayerProfile> resolve();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<ResolvableProfile> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder name(@Nullable String name);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder uuid(@Nullable UUID uuid);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addProperty(@NonNull ProfileProperty property);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAllProperties(@NonNull List<@NonNull ProfileProperty> properties);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/SeededContainerLoot.java b/src/main/java/io/papermc/paper/component/item/SeededContainerLoot.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..4eb82c2611aa217c7053efc994b4b794a76e5e7c
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/SeededContainerLoot.java
+@@ -0,0 +1,37 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import net.kyori.adventure.key.Key;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface SeededContainerLoot {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static @NonNull SeededContainerLoot seededContainerLoot(final @NonNull Key lootTableKey, final long seed) {
++        return SeededContainerLoot.seededContainerLoot(lootTableKey).seed(seed).build();
++    }
++
++    @Contract(value = "_, -> new", pure = true)
++    static SeededContainerLoot.@NonNull Builder seededContainerLoot(final @NonNull Key lootTableKey) {
++        return ComponentTypesBridge.bridge().seededContainerLoot(lootTableKey);
++    }
++
++    @Contract(pure = true)
++    @NonNull Key lootTable();
++
++    @Contract(pure = true)
++    long seed();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<SeededContainerLoot> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder lootTable(@NonNull Key key);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder seed(long seed);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/ShownInTooltip.java b/src/main/java/io/papermc/paper/component/item/ShownInTooltip.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..75c4ede2e9a2913a2bd542935b0bcaba454ad749
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/ShownInTooltip.java
+@@ -0,0 +1,21 @@
++package io.papermc.paper.component.item;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface ShownInTooltip<T> {
++
++    @Contract(pure = true)
++    boolean showInTooltip();
++
++    @Contract(value = "_ -> new", pure = true)
++    @NonNull T showInTooltip(boolean showInTooltip);
++
++    interface Builder<B> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull B showInTooltip(boolean showInTooltip);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/SuspiciousStewEffects.java b/src/main/java/io/papermc/paper/component/item/SuspiciousStewEffects.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..59c559fc0c139a6b688ef69a484e24c1d3543007
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/SuspiciousStewEffects.java
+@@ -0,0 +1,42 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import io.papermc.paper.potion.SuspiciousEffectEntry;
++import java.util.Arrays;
++import java.util.List;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface SuspiciousStewEffects {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull SuspiciousStewEffects suspiciousStewEffects(final @NonNull SuspiciousEffectEntry @NonNull...effects) {
++        return suspiciousStewEffects().addAll(Arrays.asList(effects)).build();
++    }
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull SuspiciousStewEffects suspiciousStewEffects(final @NonNull List<@NonNull SuspiciousEffectEntry> effects) {
++        return suspiciousStewEffects().addAll(effects).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static SuspiciousStewEffects.@NonNull Builder suspiciousStewEffects() {
++        return ComponentTypesBridge.bridge().suspiciousStewEffects();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull SuspiciousEffectEntry> effects();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<SuspiciousStewEffects> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder add(@NonNull SuspiciousEffectEntry entry);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addAll(@NonNull List<@NonNull SuspiciousEffectEntry> entries);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/Unbreakable.java b/src/main/java/io/papermc/paper/component/item/Unbreakable.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb0e8598ea179b180aa8513271b8aaf020ce46ee
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/Unbreakable.java
+@@ -0,0 +1,24 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++@ApiStatus.NonExtendable
++public interface Unbreakable extends ShownInTooltip<Unbreakable> {
++
++    @Contract(value = "_ -> new", pure = true)
++    static @NonNull Unbreakable unbreakable(final boolean showInTooltip) {
++        return unbreakable().showInTooltip(showInTooltip).build();
++    }
++
++    @Contract(value = "-> new", pure = true)
++    static Unbreakable.@NonNull Builder unbreakable() {
++        return ComponentTypesBridge.bridge().unbreakable();
++    }
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ShownInTooltip.Builder<Builder>, ComponentBuilder<Unbreakable> {
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/WritableBookContent.java b/src/main/java/io/papermc/paper/component/item/WritableBookContent.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..e59a79339b31a914d8063a1aa6949a598f852a8c
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/WritableBookContent.java
+@@ -0,0 +1,38 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import io.papermc.paper.util.Filtered;
++import java.util.Collection;
++import java.util.List;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface WritableBookContent {
++
++    @Contract(value = "-> new", pure = true)
++    static WritableBookContent.@NonNull Builder writeableBookContent() {
++        return ComponentTypesBridge.bridge().writeableBookContent();
++    }
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull Filtered<String>> pages();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<WritableBookContent> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPage(@NonNull String page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPages(@NonNull Collection<@NonNull String> page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPageFiltered(@NonNull Filtered<@NonNull String> page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPagesFiltered(@NonNull Collection<@NonNull Filtered<@NonNull String>> pages);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/item/WrittenBookContent.java b/src/main/java/io/papermc/paper/component/item/WrittenBookContent.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..671b0e9b35863b2137fcf778fbba1fdd7dea58e6
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/item/WrittenBookContent.java
+@@ -0,0 +1,72 @@
++package io.papermc.paper.component.item;
++
++import io.papermc.paper.component.ComponentBuilder;
++import io.papermc.paper.util.Filtered;
++import java.util.Collection;
++import java.util.List;
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.ComponentLike;
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.Unmodifiable;
++
++@ApiStatus.NonExtendable
++public interface WrittenBookContent {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static WrittenBookContent.@NonNull Builder writtenBookContent(final @NonNull String title, final @NonNull String author) {
++        return writtenBookContent(Filtered.create(title, null), author);
++    }
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static WrittenBookContent.@NonNull Builder writtenBookContent(final @NonNull Filtered<@NonNull String> title, final @NonNull String author) {
++        return ComponentTypesBridge.bridge().writtenBookContent(title, author);
++    }
++
++    @Contract(pure = true)
++    @NonNull Filtered<@NonNull String> title();
++
++    @Contract(pure = true)
++    @NonNull String author();
++
++    @Contract(pure = true)
++    int generation();
++
++    @Contract(pure = true)
++    @NonNull @Unmodifiable List<@NonNull Filtered<@NonNull Component>> pages();
++
++    @Contract(pure = true)
++    boolean resolved();
++
++    @ApiStatus.NonExtendable
++    interface Builder extends ComponentBuilder<WrittenBookContent> {
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder title(@NonNull String title);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder titleFiltered(@NonNull Filtered<@NonNull String> title);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder author(@NonNull String author);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder generation(int generation);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder resolved(boolean resolved);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPage(@NonNull ComponentLike page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPages(@NonNull Collection<@NonNull ? extends ComponentLike> page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPageFiltered(@NonNull Filtered<@NonNull ? extends ComponentLike> page);
++
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull Builder addPagesFiltered(@NonNull Collection<@NonNull Filtered<@NonNull ? extends ComponentLike>> pages);
++    }
++}
+diff --git a/src/main/java/io/papermc/paper/component/package-info.java b/src/main/java/io/papermc/paper/component/package-info.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..37c9e2b084fe4c82242ae64569bb76beb6a88c09
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/component/package-info.java
+@@ -0,0 +1,5 @@
++@DefaultQualifier(NonNull.class)
++package io.papermc.paper.component;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.framework.qual.DefaultQualifier;
+diff --git a/src/main/java/io/papermc/paper/registry/RegistryKey.java b/src/main/java/io/papermc/paper/registry/RegistryKey.java
+index 7b79bf33074355020e0b3b5ef40c7f2e6ba644b4..5cf3aa4641822c91adfbd70a847ca529fb2752a5 100644
+--- a/src/main/java/io/papermc/paper/registry/RegistryKey.java
++++ b/src/main/java/io/papermc/paper/registry/RegistryKey.java
+@@ -1,5 +1,6 @@
+ package io.papermc.paper.registry;
+ 
++import io.papermc.paper.component.DataComponentType;
+ import net.kyori.adventure.key.Keyed;
+ import org.bukkit.Art;
+ import org.bukkit.Fluid;
+@@ -138,4 +139,5 @@ public sealed interface RegistryKey<T> extends Keyed permits RegistryKeyImpl {
+     RegistryKey<Fluid> FLUID = create("fluid");
+     RegistryKey<Frog.Variant> FROG_VARIANT = create("frog_variant");
+     RegistryKey<MapCursor.Type> MAP_DECORATION_TYPE = create("map_decoration_type");
++    RegistryKey<DataComponentType> DATA_COMPONENT_TYPE = create("data_component_type");
+ }
+diff --git a/src/main/java/io/papermc/paper/util/Filtered.java b/src/main/java/io/papermc/paper/util/Filtered.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c8cdf46bc12501e1f284b4760c48e79233d05ff
+--- /dev/null
++++ b/src/main/java/io/papermc/paper/util/Filtered.java
+@@ -0,0 +1,30 @@
++package io.papermc.paper.util;
++
++import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.ApiStatus;
++import org.jetbrains.annotations.Contract;
++
++/**
++ * Denotes that this type is filterable by the client, and may be shown differently
++ * depending on the player's set configuration.
++ *
++ * @param <T> type of value
++ */
++@ApiStatus.Experimental
++public interface Filtered<T> {
++
++    @Contract(value = "_, _ -> new", pure = true)
++    static <T> @NonNull Filtered<T> create(final @NonNull T raw, final @Nullable T filtered) {
++        @ApiStatus.Internal
++        record Instance<T>(T raw, T filtered) implements Filtered<T> {}
++
++        return new Instance<>(raw, filtered);
++    }
++
++    @Contract(pure = true)
++    @NonNull T raw();
++
++    @Contract(pure = true)
++    @Nullable T filtered();
++}
+diff --git a/src/main/java/org/bukkit/Material.java b/src/main/java/org/bukkit/Material.java
+index 7509b61dfdc0a6675256970cb850b08f9e814580..28e2628d8d0a6af742b2fa89e5581e6b0d1a38a4 100644
+--- a/src/main/java/org/bukkit/Material.java
++++ b/src/main/java/org/bukkit/Material.java
+@@ -131,7 +131,7 @@ import org.jetbrains.annotations.Nullable;
+ @SuppressWarnings({"DeprecatedIsStillUsed", "deprecation"}) // Paper
+ public enum Material implements Keyed, Translatable, net.kyori.adventure.translation.Translatable { // Paper
+     //<editor-fold desc="Materials" defaultstate="collapsed">
+-    AIR(9648, 0),
++    AIR(9648, 64), // Paper - air technically stacks to 64
+     STONE(22948),
+     GRANITE(21091),
+     POLISHED_GRANITE(5477),
+@@ -5710,6 +5710,7 @@ public enum Material implements Keyed, Translatable, net.kyori.adventure.transla
+      */
+     @ApiStatus.Internal
+     @Nullable
++    @org.jetbrains.annotations.Contract(pure = true) // Paper
+     public ItemType asItemType() {
+         Material material = this;
+         if (isLegacy()) {
+@@ -5726,6 +5727,7 @@ public enum Material implements Keyed, Translatable, net.kyori.adventure.transla
+      */
+     @ApiStatus.Internal
+     @Nullable
++    @org.jetbrains.annotations.Contract(pure = true) // Paper
+     public BlockType asBlockType() {
+         Material material = this;
+         if (isLegacy()) {
+@@ -5733,4 +5735,43 @@ public enum Material implements Keyed, Translatable, net.kyori.adventure.transla
+         }
+         return Registry.BLOCK.get(material.key);
+     }
++
++    // Paper start - data component API
++    /**
++     * Gets the default data component value for the data type for this ItemType.
++     *
++     * @param dataComponentType the data component type
++     * @return the default value or null if there is none
++     * @param <T> the value type
++     * @see #hasDefaultData(io.papermc.paper.component.DataComponentType) for DataComponentType.NonValued
++     * @throws IllegalArgumentException if {@link #isItem()} is false
++     */
++    public @Nullable <T> T getDefaultData(final io.papermc.paper.component.DataComponentType.@NotNull Valued<T> dataComponentType) {
++        Preconditions.checkArgument(this.asItemType() != null);
++        return this.asItemType().getDefaultData(dataComponentType);
++    }
++
++    /**
++     * Checks if the data component type has a default value for this ItemType.
++     *
++     * @param dataComponentType the data component type
++     * @return true if there is a default value
++     * @throws IllegalArgumentException if {@link #isItem()} is false
++     */
++    public boolean hasDefaultData(final io.papermc.paper.component.@NotNull DataComponentType dataComponentType) {
++        Preconditions.checkArgument(this.asItemType() != null);
++        return this.asItemType().hasDefaultData(dataComponentType);
++    }
++
++    /**
++     * Gets the default data component types for this ItemType.
++     *
++     * @return an immutable set of data component types
++     * @throws IllegalArgumentException if {@link #isItem()} is false
++     */
++    public java.util.@org.jetbrains.annotations.Unmodifiable @NotNull Set<io.papermc.paper.component.DataComponentType> getDefaultDataTypes() {
++        Preconditions.checkArgument(this.asItemType() != null);
++        return this.asItemType().getDefaultDataTypes();
++    }
++    // Paper end - data component API
+ }
+diff --git a/src/main/java/org/bukkit/Registry.java b/src/main/java/org/bukkit/Registry.java
+index 88bb3b9ae99fae97ec21972b75ec43cb6b7b22b5..ca3a0a268a80ea3d342ec1c2c9d8ae105d271c88 100644
+--- a/src/main/java/org/bukkit/Registry.java
++++ b/src/main/java/org/bukkit/Registry.java
+@@ -343,6 +343,8 @@ public interface Registry<T extends Keyed> extends Iterable<T> {
+             return StreamSupport.stream(this.spliterator(), false);
+         }
+     };
++
++    Registry<io.papermc.paper.component.DataComponentType> DATA_COMPONENT_TYPE = io.papermc.paper.registry.RegistryAccess.registryAccess().getRegistry(io.papermc.paper.registry.RegistryKey.DATA_COMPONENT_TYPE); // Paper
+     // Paper end
+     /**
+      * Get the object by its key.
+diff --git a/src/main/java/org/bukkit/inventory/ItemFactory.java b/src/main/java/org/bukkit/inventory/ItemFactory.java
+index e20f64828548c647a29dad5a475f4596cad88cd8..80c10ab30ca6ea6e2a80a916d8a5831a01c3d5ae 100644
+--- a/src/main/java/org/bukkit/inventory/ItemFactory.java
++++ b/src/main/java/org/bukkit/inventory/ItemFactory.java
+@@ -162,6 +162,7 @@ public interface ItemFactory {
+      */
+     @ApiStatus.Internal
+     @NotNull
++    @Deprecated // Paper - This seems to be flawed-- this is not good anymore
+     Material updateMaterial(@NotNull final ItemMeta meta, @NotNull final Material material) throws IllegalArgumentException;
+ 
+     /**
+diff --git a/src/main/java/org/bukkit/inventory/ItemStack.java b/src/main/java/org/bukkit/inventory/ItemStack.java
+index 15a59a27f0854ff6f4038349d3a0d00347130140..c2212e34197cb0c1c8b378e8f2a049af66c7ab16 100644
+--- a/src/main/java/org/bukkit/inventory/ItemStack.java
++++ b/src/main/java/org/bukkit/inventory/ItemStack.java
+@@ -1029,4 +1029,123 @@ public class ItemStack implements Cloneable, ConfigurationSerializable, Translat
+         return Bukkit.getUnsafe().computeTooltipLines(this, tooltipContext, player);
+     }
+     // Paper end - expose itemstack tooltip lines
++
++    // Paper start - data component API
++    /**
++     * Gets the value for the data component type on this stack.
++     *
++     * @param type the data component type
++     * @return the value for the data component type, or null if not set or marked as removed
++     * @param <T> the value type
++     * @see #hasData(io.papermc.paper.component.DataComponentType) for DataComponentType.NonValued
++     */
++    @org.jetbrains.annotations.Contract(pure = true)
++    public <T> @Nullable T getData(final io.papermc.paper.component.DataComponentType.@NotNull Valued<T> type) {
++        return this.craftDelegate.getData(type);
++    }
++
++    /**
++     * Gets the value for the data component type on this stack with
++     * a fallback value.
++     *
++     * @param type the data component type
++     * @param fallback the fallback value if the value isn't present
++     * @return the value for the data component type or the fallback value
++     * @param <T> the value type
++     */
++    @Utility
++    @org.jetbrains.annotations.Contract(value = "_, !null -> !null", pure = true)
++    public <T> @Nullable T getDataOrDefault(final io.papermc.paper.component.DataComponentType.@NotNull Valued<? extends T> type, final @Nullable T fallback) {
++        final T object = this.getData(type);
++        return object != null ? object : fallback;
++    }
++
++    /**
++     * Checks if the data component type is set on the itemstack.
++     *
++     * @param type the data component type
++     * @return true if set, false otherwise
++     */
++    @org.jetbrains.annotations.Contract(pure = true)
++    public boolean hasData(final io.papermc.paper.component.@NotNull DataComponentType type) {
++        return this.craftDelegate.hasData(type);
++    }
++
++    /**
++     * Gets all the data component types set on this stack.
++     *
++     * @return an immutable set of data component types
++     */
++    @org.jetbrains.annotations.Contract("-> new")
++    public java.util.@org.jetbrains.annotations.Unmodifiable Set<io.papermc.paper.component.@NotNull DataComponentType> getDataTypes() {
++        return this.craftDelegate.getDataTypes();
++    }
++
++    /**
++     * Sets the value of the data component type for this itemstack. To
++     * reset the value to the default for the {@link #getType() item type}, use
++     * {@link #resetData(io.papermc.paper.component.DataComponentType)}. To mark the data component type
++     * as removed, use {@link #unsetData(io.papermc.paper.component.DataComponentType)}
++     *
++     * @param type component type
++     * @param valueBuilder value builder
++     * @param <T> value type
++     */
++    @Utility
++    public <T> void setData(final io.papermc.paper.component.DataComponentType.@NotNull Valued<T> type, final io.papermc.paper.component.@NotNull ComponentBuilder<T> valueBuilder) {
++        this.setData(type, valueBuilder.build());
++    }
++
++    /**
++     * Sets the value of the data component type for this itemstack. To
++     * reset the value to the default for the {@link #getType() item type}, use
++     * {@link #resetData(io.papermc.paper.component.DataComponentType)}. To mark the data component type
++     * as removed, use {@link #unsetData(io.papermc.paper.component.DataComponentType)}
++     *
++     * @param type component type
++     * @param value value to set
++     * @param <T> value type
++     */
++    public <T> void setData(final io.papermc.paper.component.DataComponentType.@NotNull Valued<T> type, final @NotNull T value) {
++        this.craftDelegate.setData(type, value);
++    }
++
++    /**
++     * Marks this non-valued data component type as present in this itemstack.
++     *
++     * @param type type
++     */
++    public void setData(final io.papermc.paper.component.DataComponentType.@NotNull NonValued type) {
++        this.craftDelegate.setData(type);
++    }
++
++    /**
++     * Marks this data component as removed for this itemstack.
++     *
++     * @param type data component type
++     */
++    public void unsetData(final io.papermc.paper.component.@NotNull DataComponentType type) {
++        this.craftDelegate.unsetData(type);
++    }
++
++    /**
++     * Resets the value of this component to be the default
++     * value for the item type from {@link Material#getDefaultData(io.papermc.paper.component.DataComponentType.Valued)}
++     * @param type data component type to reset
++     */
++    public void resetData(final io.papermc.paper.component.@NotNull DataComponentType type) {
++        this.craftDelegate.resetData(type);
++    }
++
++    /**
++     * Checks if the data component type is overridden from the default for the
++     * item type.
++     *
++     * @param type the data component type
++     * @return true if the data type is overridden
++     */
++    public boolean isOverridden(final io.papermc.paper.component.@NotNull DataComponentType type) {
++        return this.craftDelegate.isOverridden(type);
++    }
++    // Paper end - data component API
+ }
+diff --git a/src/main/java/org/bukkit/inventory/ItemType.java b/src/main/java/org/bukkit/inventory/ItemType.java
+index 077bd4d4e50169780f27e8502104e9e4b2ecdae6..a202cede658cb6fb5c12c80dceac7a514a31d46c 100644
+--- a/src/main/java/org/bukkit/inventory/ItemType.java
++++ b/src/main/java/org/bukkit/inventory/ItemType.java
+@@ -2443,4 +2443,31 @@ public interface ItemType extends Keyed, Translatable, net.kyori.adventure.trans
+     @Override
+     @NotNull String getTranslationKey();
+     // Paper end - add Translatable
++
++    // Paper start - data component API
++    /**
++     * Gets the default data component value for the data type for this ItemType.
++     *
++     * @param dataComponentType the data component type
++     * @return the default value or null if there is none
++     * @param <T> the value type
++     * @see #hasDefaultData(io.papermc.paper.component.DataComponentType) for DataComponentType.NonValued
++     */
++    @Nullable <T> T getDefaultData(io.papermc.paper.component.DataComponentType.@NotNull Valued<T> dataComponentType);
++
++    /**
++     * Checks if the data component type has a default value for this ItemType.
++     *
++     * @param dataComponentType the data component type
++     * @return true if there is a default value
++     */
++    boolean hasDefaultData(io.papermc.paper.component.@NotNull DataComponentType dataComponentType);
++
++    /**
++     * Gets the default data component types for this ItemType.
++     *
++     * @return an immutable set of data component types
++     */
++    java.util.@org.jetbrains.annotations.Unmodifiable @NotNull Set<io.papermc.paper.component.DataComponentType> getDefaultDataTypes();
++    // Paper end - data component API
+ }
